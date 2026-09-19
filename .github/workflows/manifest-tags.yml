@@ -6,6 +6,13 @@ on:
       - dev     # long-standing integration branch for testing
       - stable  # certified production branch
 
+concurrency:
+  group: manifest-tags-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
 jobs:
   auto-tag:
     runs-on: ubuntu-latest
