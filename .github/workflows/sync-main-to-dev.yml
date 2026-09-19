@@ -1,0 +1,28 @@
+name: Sync Main Back to Dev
+
+on:
+  push:
+    branches:
+      - stable  # whenever dev is squashed into stable (default)
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # fetch all history so git can see both branches properly
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge stable back into dev
+        run: |
+          git checkout dev
+          git pull origin dev
+          # creates a standard merge commit bringing the stable squash hash into dev
+          git merge origin/stable --no-edit --no-ff 
+          git push origin dev
