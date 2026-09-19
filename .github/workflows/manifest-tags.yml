@@ -33,19 +33,32 @@ jobs:
       - name: Handle Dev Branch Tagging
         if: github.ref == 'refs/heads/dev'
         id: dev_tag
+        shell: bash
         run: |
+          set -euo pipefail
+
           BASE_VERSION="${{ steps.base_version.outputs.BASE_VERSION }}"
-          
-          # Count ONLY the formal Pull Request merges that have landed on dev 
-          # since dev diverged from the production stable branch.
-          # If no merges exist yet, default to 0.
-          MERGE_COUNT=$(git rev-list --count --merges origin/stable..HEAD || echo 0)
-          
-          # Increment by 1 so the first build starts at rc.1 instead of rc.0
-          RC_NUMBER=$((MERGE_COUNT + 1))
-          
-          RC_TAG="v${BASE_VERSION}-rc.${RC_NUMBER}"
-          echo "FINAL_TAG=$RC_TAG" >> $GITHUB_OUTPUT
+          git fetch --force --tags origin
+
+          rc=1
+          while true; do
+            candidate="v${BASE_VERSION}-rc.${rc}"
+
+            if git rev-parse --verify --quiet "refs/tags/${candidate}" >/dev/null; then
+              existing_sha="$(git rev-parse "${candidate}^{commit}")"
+
+              if [[ "$existing_sha" == "$GITHUB_SHA" ]]; then
+                echo "FINAL_TAG=${candidate}" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+
+              rc=$((rc + 1))
+              continue
+            fi
+
+            echo "FINAL_TAG=${candidate}" >> "$GITHUB_OUTPUT"
+            exit 0
+          done
 
       # TRACK 2: THE MAIN PRODUCTION BRANCH (Stable Release)
       - name: Handle Main Branch Tagging
@@ -63,26 +76,35 @@ jobs:
       # MINT AND PUBLISH ARTIFACT
       - name: Create Git Tag
         id: create_tag
+        shell: bash
         run: |
+          set -euo pipefail
+
           TAG_TO_MINT="${{ steps.dev_tag.outputs.FINAL_TAG || steps.main_tag.outputs.FINAL_TAG }}"
+
+          if [[ -z "$TAG_TO_MINT" ]]; then
+            echo "::error::No tag was calculated."
+            exit 1
+          fi
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          if git rev-parse --verify --quiet "refs/tags/$TAG_TO_MINT" >/dev/null; then
-            EXISTING_SHA="$(git rev-parse "$TAG_TO_MINT^{commit}")"
+          if git rev-parse --verify --quiet "refs/tags/${TAG_TO_MINT}" >/dev/null; then
+            existing_sha="$(git rev-parse "${TAG_TO_MINT}^{commit}")"
 
-            if [ "$EXISTING_SHA" = "${GITHUB_SHA}" ]; then
-              echo "Tag $TAG_TO_MINT already exists on this commit; reusing it."
-              echo "MINTED_TAG=$TAG_TO_MINT" >> "$GITHUB_OUTPUT"
-              exit 0
+            if [[ "$existing_sha" != "$GITHUB_SHA" ]]; then
+              echo "::error::Tag ${TAG_TO_MINT} points to ${existing_sha}, not ${GITHUB_SHA}."
+              exit 1
             fi
 
-            echo "::error::Tag $TAG_TO_MINT already exists on a different commit."
-            echo "::error::Existing commit: $EXISTING_SHA"
-            echo "::error::Current commit: ${GITHUB_SHA}"
-            exit 1
+            echo "Tag ${TAG_TO_MINT} already exists on this commit; reusing it."
+          else
+            git tag -a "$TAG_TO_MINT" "$GITHUB_SHA" -m "Release $TAG_TO_MINT"
+            git push origin "refs/tags/${TAG_TO_MINT}"
           fi
+
+          echo "MINTED_TAG=${TAG_TO_MINT}" >> "$GITHUB_OUTPUT"
 
       - name: Generate Manifest JSON
         run: |
