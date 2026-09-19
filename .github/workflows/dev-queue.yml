@@ -1,0 +1,41 @@
+name: Flight Code Integration
+
+on:
+  merge_group: # activates when PR enters queue
+
+jobs:
+  # Job 1: will always run to satisfy branch protection
+  fprime_software_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run F Prime Unit Tests
+        run: |
+          fprime-util build --ut
+          fprime-util check
+
+  # Job 2: check hardware availability
+  check_fpga_availability:
+    runs-on: ubuntu-latest
+    outputs:
+      fpga_ready: ${{ steps.check_hardware.outputs.ready }}
+    steps:
+      - name: Check if FPGA runner is online
+        id: check_hardware
+        run: | 
+          # Use your lab server's custom status endpoint or run a lightweight script
+          # Alternatively, write a quick API curl check to see if your self-hosted runner is 'online'
+          
+          # For example, we assume it's true, but you can script a real ping here
+          echo "ready=true" >> $GITHUB_OUTPUT
+
+  # Job 3: run HWIL conditionally (not required)
+  fpga_hardware_test:
+    needs: [fprime_software_check, check_fpga_availability]
+    # only execute if previous jobs succeeded
+    if: needs.check_fpga_availability.outputs.fpga_ready == 'true'
+    runs-on: [self-hosted, fpga_target]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Flash and Test on FPGA
+        run: ./scripts/flash_and_test_fpga.sh
