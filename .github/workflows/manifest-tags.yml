@@ -6,6 +6,9 @@ on:
       - dev     # long-standing integration branch for testing
       - stable  # certified production branch
 
+permissions:
+  contents: write
+
 jobs:
   auto-tag:
     runs-on: ubuntu-latest
@@ -60,8 +63,8 @@ jobs:
           TAG_TO_MINT="${{ steps.dev_tag.outputs.FINAL_TAG || steps.main_tag.outputs.FINAL_TAG }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@://github.com"
-          git tag $TAG_TO_MINT
-          git push origin $TAG_TO_MINT
+          git tag "$TAG_TO_MINT"
+          git push origin "$TAG_TO_MINT"
           echo "MINTED_TAG=$TAG_TO_MINT" >> $GITHUB_OUTPUT
 
       - name: Generate Manifest JSON
