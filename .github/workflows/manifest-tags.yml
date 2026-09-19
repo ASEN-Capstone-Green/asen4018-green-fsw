@@ -1,0 +1,84 @@
+name: Flight Software Auto-Tagging Lifecycle
+
+on:
+  push:
+    branches:
+      - dev     # long-standing integration branch for testing
+      - stable  # certified production branch
+
+jobs:
+  auto-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # allows evaluation of merge history across branches
+
+      - name: Read Base Version
+        id: base_version
+        run: |
+          BASE=$(cat VERSION | tr -d '[:space:]')
+          echo "BASE_VERSION=$BASE" >> $GITHUB_OUTPUT
+          echo "SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      # TRACK 1: THE LONG-STANDING DEV BRANCH (Sequential -rc.X)
+      - name: Handle Dev Branch Tagging
+        if: github.ref == 'refs/heads/dev'
+        id: dev_tag
+        run: |
+          BASE_VERSION="${{ steps.base_version.outputs.BASE_VERSION }}"
+          
+          # Count ONLY the formal Pull Request merges that have landed on dev 
+          # since dev diverged from the production stable branch.
+          # If no merges exist yet, default to 0.
+          MERGE_COUNT=$(git rev-list --count --merges origin/stable..HEAD || echo 0)
+          
+          # Increment by 1 so the first build starts at rc.1 instead of rc.0
+          RC_NUMBER=$((MERGE_COUNT + 1))
+          
+          RC_TAG="v${BASE_VERSION}-rc.${RC_NUMBER}"
+          echo "FINAL_TAG=$RC_TAG" >> $GITHUB_OUTPUT
+
+      # TRACK 2: THE MAIN PRODUCTION BRANCH (Stable Release)
+      - name: Handle Main Branch Tagging
+        if: github.ref == 'refs/heads/stable'
+        id: main_tag
+        run: |
+          STABLE_TAG="v${{ steps.base_version.outputs.BASE_VERSION }}"
+          
+          if git rev-parse "$STABLE_TAG" >/dev/null 2>&1; then
+            echo "::error:: Tag $STABLE_TAG already exists on remote! The team forgot to bump the VERSION file."
+            exit 1
+          fi
+          echo "FINAL_TAG=$STABLE_TAG" >> $GITHUB_OUTPUT
+
+      # MINT AND PUBLISH ARTIFACT
+      - name: Create Git Tag
+        id: create_tag
+        run: |
+          TAG_TO_MINT="${{ steps.dev_tag.outputs.FINAL_TAG || steps.main_tag.outputs.FINAL_TAG }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@://github.com"
+          git tag $TAG_TO_MINT
+          git push origin $TAG_TO_MINT
+          echo "MINTED_TAG=$TAG_TO_MINT" >> $GITHUB_OUTPUT
+
+      - name: Generate Manifest JSON
+        run: |
+          cat <<EOF > fprime-manifest.json
+          {
+            "manifest_format_version": "1.0.0",
+            "flight_software_version": "${{ steps.create_tag.outputs.MINTED_TAG }}",
+            "commit_sha": "${{ github.sha }}",
+            "short_sha": "${{ steps.base_version.outputs.SHORT_SHA }}",
+            "build_timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+            "branch": "${{ github.ref_name }}"
+          }
+          EOF
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest-${{ github.ref_name }}
+          path: fprime-manifest.json
