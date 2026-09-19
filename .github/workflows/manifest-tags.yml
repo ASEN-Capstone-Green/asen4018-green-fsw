@@ -6,6 +6,10 @@ on:
       - dev     # long-standing integration branch for testing
       - stable  # certified production branch
 
+concurrency:
+  group: manifest-tags-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -61,11 +65,24 @@ jobs:
         id: create_tag
         run: |
           TAG_TO_MINT="${{ steps.dev_tag.outputs.FINAL_TAG || steps.main_tag.outputs.FINAL_TAG }}"
+
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@://github.com"
-          git tag "$TAG_TO_MINT"
-          git push origin "$TAG_TO_MINT"
-          echo "MINTED_TAG=$TAG_TO_MINT" >> $GITHUB_OUTPUT
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git rev-parse --verify --quiet "refs/tags/$TAG_TO_MINT" >/dev/null; then
+            EXISTING_SHA="$(git rev-parse "$TAG_TO_MINT^{commit}")"
+
+            if [ "$EXISTING_SHA" = "${GITHUB_SHA}" ]; then
+              echo "Tag $TAG_TO_MINT already exists on this commit; reusing it."
+              echo "MINTED_TAG=$TAG_TO_MINT" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "::error::Tag $TAG_TO_MINT already exists on a different commit."
+            echo "::error::Existing commit: $EXISTING_SHA"
+            echo "::error::Current commit: ${GITHUB_SHA}"
+            exit 1
+          fi
 
       - name: Generate Manifest JSON
         run: |
