@@ -5,25 +5,35 @@ on:
     branches:
       - stable  # whenever dev is squashed into stable (default)
 
-permissions:
+permissions: {}
   contents: write
 
 jobs:
   sync-branches:
     runs-on: ubuntu-latest
     steps:
+      - name: Generate GitHub App Token
+        id: get_token
+        uses: actions/create-github-app-token@v4
+        with:
+          app_id: ${{ vars.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # fetch all history so git can see both branches properly
+          token: ${{ steps.get_token.outputs.token }}
+          persist-credentials: true
 
-      - name: Configure Git
+      - name: Configure Git and Merge stable back into dev
+        env: 
+          GITHUB_TOKEN: ${{ steps.get_token.outputs.token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "fsw-repo-automation-bot[bot]"
+          git config user.email "${{ vars.APP_ID }}+fsw-repo-automation-bot[bot]@users.noreply.github.com"
 
-      - name: Merge stable back into dev
-        run: |
           git checkout dev
           git pull origin dev
           # creates a standard merge commit bringing the stable squash hash into dev
