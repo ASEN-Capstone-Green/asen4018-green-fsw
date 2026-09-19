@@ -6,7 +6,6 @@ on:
       - stable  # whenever dev is squashed into stable (default)
 
 permissions: {}
-  contents: write
 
 jobs:
   sync-branches:
