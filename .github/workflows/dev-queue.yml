@@ -1,0 +1,56 @@
+name: Flight Code Integration
+
+on:
+  merge_group: # activates when PR enters queue
+
+jobs:
+  # Job 1: will always run to satisfy branch protection
+  fprime_software_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run F Prime Unit Tests
+        run: |
+          fprime-util build --ut
+          fprime-util check
+
+  # Job 2: check hardware availability
+  check_fpga_availability:
+    runs-on: ubuntu-latest
+    outputs:
+      fpga_ready: ${{ steps.ping_host.outputs.ready }}
+    steps:
+      - name: Ping Lab Host Machine via Tailscale IP
+        id: ping_host
+        env: 
+          # example IP address, fill in with actual Tailscale IP  
+          LAB_HOST_IP: "100.101.102.103"
+        run: | 
+          # default: evaluate false for safety
+          echo "ready=false" >> $GITHUB_OUTPUT
+
+          # attempt to find lab machine
+          if ping -c 1 -W 3 "$LAB_HOST_IP" > /dev/null; then
+            echo "Lab machine found online!"
+            echo "ready=true" >> $GITHUB_OUTPUT
+          else 
+            echo "WARNING: Lab host machine is offline/could not be found. Skipping hardware test."
+
+  # Job 3: run HWIL conditionally (not required), only if Job 2 is true
+  fpga_hardware_test:
+    needs: [fprime_software_check, check_fpga_availability]
+    # only execute if previous jobs succeeded
+    if: needs.check_fpga_availability.outputs.fpga_ready == 'true'
+    # run test on physical machine, not on github actions
+    runs-on: [self-hosted, fpga_target]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cross-Compile F Prime for Target 
+        run: |
+          fprime-util generate target-cross
+          fprime-util build target-cross
+      
+      - name: Flash and Test on FPGA
+        run: |
+          # script runs on lab host to flash connected fpga
+          ./scripts/flash_and_test_fpga.sh # path will likely need update
