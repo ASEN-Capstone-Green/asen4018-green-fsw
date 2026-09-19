@@ -6,6 +6,9 @@ on:
       - dev     # long-standing integration branch for testing
       - stable  # certified production branch
 
+permissions:
+  contents: write
+
 jobs:
   auto-tag:
     runs-on: ubuntu-latest
