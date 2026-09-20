@@ -1,9 +1,0 @@
-# Force Git to automatically handle text files and normalize them to LF internally
-* text=auto
-
-# Ensure shell scripts always stay as LF
-*.sh text eol=lf
-
-# Leave binary files completely untouched
-*.png binary
-*.jpg binary
