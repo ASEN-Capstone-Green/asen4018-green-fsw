@@ -11,7 +11,7 @@ This repository houses all flight software for the ASEN Capstone Green team for 
 
 ### 1.3.1 Some Helpful Aliases
 Aliases basically allow you to define your own custom commands which bunder other commands, which can speed up the development process. For this repository, the useful alias configurations and an example of how they might be used are shown below:
-
+ 
 ```shell
 # 1. new-feature 
 git config --local alias.new-feature '!git checkout dev && git pull && git fetch --prune && git checkout -b'

@@ -27,7 +27,7 @@ jobs:
           persist-credentials: true
 
       - name: Configure Git and Merge stable back into dev
-        env: 
+        env:
           GITHUB_TOKEN: ${{ steps.get_token.outputs.token }}
         run: |
           git config user.name "fsw-repo-automation-bot[bot]"
@@ -36,5 +36,5 @@ jobs:
           git checkout dev
           git pull origin dev
           # creates a standard merge commit bringing the stable squash hash into dev
-          git merge origin/stable --no-edit --no-ff 
+          git merge origin/stable --no-edit --no-ff
           git push origin dev
