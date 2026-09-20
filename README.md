@@ -30,9 +30,7 @@ git rm-feature dev-1.4/gps-sensor
 
 > Note: On Linux (sorry Windows), you can also configure terminal to autocomplete by adding `export GIT_COMPLETION_CHECKOUT_NO_GUESS=1` to `~/.bashrc` and running `source ~/.bashrc`.
 
-### 1.3.2 Manifests and Versioning
-
-### 1.3.3 Tags
+### 1.3.2 Tags
 <!--
 Example tag
 ```shell
@@ -56,6 +54,14 @@ git push origin main
 ```
 -->
 
+### 1.3.3 Manifests and Versioning
+
+### 1.3.4 Run Artifacts
+TODO:
+* use cmake or fprime-util to read the json file and bake flight_software_version string into constant byte array in fsw binary (allow GDS to query what manifest hardware is flying)
+* attach manifest-branchName.json to releases using softprops/action-gh-release to create a permanent release whenever stable updates
+* potentially send to host machine so it can be uploaded before flashing
+* Git Branch Help tab
 
 # 2. Setting up the Flight Software
 
