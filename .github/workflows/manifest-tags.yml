@@ -66,7 +66,7 @@ jobs:
         id: main_tag
         run: |
           STABLE_TAG="v${{ steps.base_version.outputs.BASE_VERSION }}"
-          
+
           if git rev-parse "$STABLE_TAG" >/dev/null 2>&1; then
             echo "::error:: Tag $STABLE_TAG already exists on remote! The team forgot to bump the VERSION file."
             exit 1
@@ -88,17 +88,12 @@ jobs:
           fi
 
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@://github.com"
 
+          # Check if the SPECIFIC tag we want to mint exists,
+          # instead of general SHA matching that can conflict during Fast-Forwards
           if git rev-parse --verify --quiet "refs/tags/${TAG_TO_MINT}" >/dev/null; then
-            existing_sha="$(git rev-parse "${TAG_TO_MINT}^{commit}")"
-
-            if [[ "$existing_sha" != "$GITHUB_SHA" ]]; then
-              echo "::error::Tag ${TAG_TO_MINT} points to ${existing_sha}, not ${GITHUB_SHA}."
-              exit 1
-            fi
-
-            echo "Tag ${TAG_TO_MINT} already exists on this commit; reusing it."
+            echo "Tag ${TAG_TO_MINT} already exists; skipping minting."
           else
             git tag -a "$TAG_TO_MINT" "$GITHUB_SHA" -m "Release $TAG_TO_MINT"
             git push origin "refs/tags/${TAG_TO_MINT}"
