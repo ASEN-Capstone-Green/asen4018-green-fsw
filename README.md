@@ -1,36 +1,39 @@
 # asen4018-green-fsw
 This repository houses all flight software for the ASEN Capstone Green team for the astrodynamics/remote sensing section.
 
-# 1. Getting Started
+# 1. Repository Quickstart
+This section provides the quick instructions for getting started with flight code development/checkout. If you need a particular setup or will be doing more in depth work, we recommend following the more detailed instructions in [repo-setup.md](docs/repo-setup/repo-setup.md). 
 
-## 1.1 Cloning the Repository for Development
+## 1.1 F Prime Environment Setup
 
-## 1.2 Cloning the Repository onto Flight Module
-
-## 1.3 Workflow
-
-### 1.3.1 Some Helpful Aliases
-Aliases basically allow you to define your own custom commands which bunder other commands, which can speed up the development process. For this repository, the useful alias configurations and an example of how they might be used are shown below:
-
+## 1.2 Cloning the Repo for Development
+On the [homepage](https://github.com/ASEN-Capstone-Green/asen4018-green-fsw) of the repository, scroll up to the top of the page and click the Green `<> Code ▾` button. Use your preferred cloning method (SSH, HTTPS, CLI) to clone the repository to your local machine. E.g. if you wanted to use SSH, you would run the following at the local file location you want to clone the repository to:
 ```shell
-# 1. new-feature
-git config --local alias.new-feature '!git checkout dev && git pull && git fetch --prune && git checkout -b'
-## ex:
-git new-feature dev-1.4/gps-sensor
-
-# 2. rm-feature (rm is short for remove)
-git config --local alias.rm-feature '!git checkout dev && git pull && git fetch --prune && git branch -d'
-## ex:
-git rm-feature dev-1.4/gps-sensor
-
-# more to come, soon(TM)
+git clone git@github.com:ASEN-Capstone-Green/asen4018-green-fsw.git
 ```
 
-> Note: you can view all your active aliases with `git config --list`.
+From there, navigate to the project root and switch to `dev` with:
+```shell
+git checkout dev
+```
 
-> Note: On Linux (sorry Windows), you can also configure terminal to autocomplete by adding `export GIT_COMPLETION_CHECKOUT_NO_GUESS=1` to `~/.bashrc` and running `source ~/.bashrc`.
+Then you can start on development by checking out your own new feature branch with:
+```shell
+git pull # makes sure your dev branch is up to date
+git checkout -b feature/your-new-feature # creates and switche to the new branch
+git push -u origin HEAD # pushes your local branch to remote
+```
 
-### 1.3.2 Tags
+Finally, once you have code ready for testing on hardware (i.e. compiled and working on your local F Prime instance), push your code to remote and create a pull request for your branch to dev (make sure to merge dev into your branch if it has been updated!) at [the pull requests page](https://github.com/ASEN-Capstone-Green/asen4018-green-fsw/compare) and reach out to Luke or your subsystem lead. 
+
+## 1.3 Flashing FSW onto the Flight Module
+
+
+# 2. Workflow
+
+## 2.1 Manifests and Versioning
+
+## 2.2 Tags
 <!--
 Example tag
 ```shell
@@ -54,17 +57,23 @@ git push origin main
 ```
 -->
 
-### 1.3.3 Manifests and Versioning
+## 2.3 Some Helpful Aliases
+Aliases basically allow you to define your own custom commands which bunder other commands, which can speed up the development process. For this repository, the useful alias configurations and an example of how they might be used are shown below:
 
-### 1.3.4 Run Artifacts
-TODO:
-* use cmake or fprime-util to read the json file and bake flight_software_version string into constant byte array in fsw binary (allow GDS to query what manifest hardware is flying)
-* attach manifest-branchName.json to releases using softprops/action-gh-release to create a permanent release whenever stable updates
-* potentially send to host machine so it can be uploaded before flashing
-* Git Branch Help tab
+```shell
+# 1. new-feature
+git config --local alias.new-feature '!git checkout dev && git pull && git fetch --prune && git checkout -b'
+## ex:
+git new-feature dev-1.4/gps-sensor
 
-# 2. Setting up the Flight Software
+# 2. rm-feature (rm is short for remove)
+git config --local alias.rm-feature '!git checkout dev && git pull && git fetch --prune && git branch -d'
+## ex:
+git rm-feature dev-1.4/gps-sensor
 
-## 2.1 System Setup
+# more to come, soon(TM)
+```
 
-## 2.2 Flight Software Compilation
+> Note: you can view all your active aliases with `git config --list`.
+
+> Note: On Linux and WSL (sorry Mac users), you can also configure terminal to autocomplete by adding `export GIT_COMPLETION_CHECKOUT_NO_GUESS=1` to `~/.bashrc` and running `source ~/.bashrc`.
